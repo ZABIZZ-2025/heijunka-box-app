@@ -1,16 +1,12 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextRequest, NextResponse } from 'next/server'
+import bcrypt from 'bcryptjs'
+import { v4 as uuidv4 } from 'uuid'
 
 // Create admin client with service role key
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  }
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
 export async function POST(request: NextRequest) {
@@ -25,43 +21,49 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create user in Supabase Auth with auto-confirm
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true, // Auto-confirm email
-    })
-
-    if (authError) {
-      console.error('Auth error:', authError)
+    if (password.length < 6) {
       return NextResponse.json(
-        { error: authError.message },
+        { error: 'La password deve essere di almeno 6 caratteri' },
         { status: 400 }
       )
     }
 
-    if (!authData.user) {
+    // Check if username or email already exists
+    const { data: existing } = await supabaseAdmin
+      .from('utenti')
+      .select('id')
+      .or(`username.eq.${username},email.eq.${email}`)
+      .single()
+
+    if (existing) {
       return NextResponse.json(
-        { error: 'Errore nella creazione utente' },
-        { status: 500 }
+        { error: 'Username o email già esistente' },
+        { status: 400 }
       )
     }
 
+    // Hash password
+    const salt = await bcrypt.genSalt(10)
+    const passwordHash = await bcrypt.hash(password, salt)
+
+    // Generate UUID for the user
+    const userId = uuidv4()
+
     // Create user profile in utenti table
-    const { error: profileError } = await supabaseAdmin
+    const { data: newUser, error: profileError } = await supabaseAdmin
       .from('utenti')
       .insert({
-        id: authData.user.id,
+        id: userId,
         email,
         username,
-        password_hash: 'managed_by_supabase_auth',
+        password_hash: passwordHash,
         nome_completo,
         reparto_id: reparto_id || null,
       })
+      .select()
+      .single()
 
     if (profileError) {
-      // Rollback: delete auth user if profile creation fails
-      await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
       console.error('Profile error:', profileError)
       return NextResponse.json(
         { error: profileError.message },
@@ -72,8 +74,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       user: {
-        id: authData.user.id,
-        email: authData.user.email,
+        id: newUser.id,
+        email: newUser.email,
+        username: newUser.username,
       },
     })
   } catch (error: any) {

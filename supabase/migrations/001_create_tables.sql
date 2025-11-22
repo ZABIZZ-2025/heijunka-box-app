@@ -22,7 +22,7 @@ CREATE INDEX idx_reparti_ordine ON reparti(ordine_visualizzazione);
 
 -- Create utenti table
 CREATE TABLE utenti (
-  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   email VARCHAR(255) UNIQUE NOT NULL,
   username VARCHAR(100) UNIQUE NOT NULL,
   password_hash VARCHAR(255) NOT NULL DEFAULT 'managed_by_supabase_auth',

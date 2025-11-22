@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { useAuthStore } from '@/store/authStore'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -37,18 +36,21 @@ const adminNavigation = [
 export function Sidebar() {
   const pathname = usePathname()
   const router = useRouter()
-  const supabase = createClient()
   const { profile, reparto, reset, isAdmin } = useAuthStore()
 
   // Show admin menu if user is admin or has no profile yet (initial setup)
   const showAdminMenu = isAdmin() || !profile || !reparto
 
   const handleLogout = async () => {
-    await supabase.auth.signOut()
-    reset()
-    toast.success('Logout effettuato')
-    router.push('/login')
-    router.refresh()
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+      reset()
+      toast.success('Logout effettuato')
+      router.push('/login')
+      router.refresh()
+    } catch (error) {
+      toast.error('Errore durante il logout')
+    }
   }
 
   return (

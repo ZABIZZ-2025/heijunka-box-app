@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -10,32 +9,32 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import toast from 'react-hot-toast'
 
 export default function LoginPage() {
-  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const router = useRouter()
-  const supabase = createClient()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
       })
 
-      if (error) {
-        toast.error('Credenziali non valide')
+      const result = await response.json()
+
+      if (!response.ok) {
+        toast.error(result.error || 'Credenziali non valide')
         return
       }
 
-      if (data.user) {
-        toast.success('Accesso effettuato!')
-        router.push('/heijunka')
-        router.refresh()
-      }
+      toast.success('Accesso effettuato!')
+      router.push('/heijunka')
+      router.refresh()
     } catch (error) {
       toast.error('Errore durante il login')
     } finally {
@@ -58,13 +57,13 @@ export default function LoginPage() {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="username">Username o Email</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="email@azienda.it"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="username"
+                type="text"
+                placeholder="username o email@azienda.it"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
               />
             </div>
