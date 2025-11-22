@@ -129,29 +129,26 @@ export default function UtentiPage() {
 
         toast.success('Utente aggiornato')
       } else {
-        // Create new user via Supabase Auth
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email: formData.email,
-          password: formData.password,
-        })
-
-        if (authError) throw authError
-
-        // Create user profile
-        const { error: profileError } = await supabase
-          .from('utenti')
-          .insert({
-            id: authData.user?.id,
+        // Create new user via API route (uses admin privileges)
+        const response = await fetch('/api/admin/users', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
             email: formData.email,
+            password: formData.password,
             username: formData.username,
-            password_hash: 'managed_by_supabase_auth',
             nome_completo: formData.nome_completo,
             reparto_id: formData.reparto_id || null,
-          })
+          }),
+        })
 
-        if (profileError) throw profileError
+        const result = await response.json()
 
-        toast.success('Utente creato. Un\'email di conferma è stata inviata.')
+        if (!response.ok) {
+          throw new Error(result.error || 'Errore nella creazione utente')
+        }
+
+        toast.success('Utente creato con successo')
       }
 
       setDialogOpen(false)
@@ -279,7 +276,7 @@ export default function UtentiPage() {
             </DialogTitle>
             {!editingUtente && (
               <DialogDescription>
-                L'utente riceverà un'email per confermare l'account.
+                L'utente potrà accedere immediatamente con le credenziali fornite.
               </DialogDescription>
             )}
           </DialogHeader>
