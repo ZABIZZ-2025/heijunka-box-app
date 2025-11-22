@@ -111,8 +111,8 @@ export default function HeijunkaPage() {
   })
 
   // Get unique values for filters
-  const clienti = [...new Set(kanbans.map(k => k.cliente).filter(Boolean))]
-  const modelli = [...new Set(kanbans.map(k => k.modello).filter(Boolean))]
+  const clienti = Array.from(new Set(kanbans.map(k => k.cliente).filter(Boolean))) as string[]
+  const modelli = Array.from(new Set(kanbans.map(k => k.modello).filter(Boolean))) as string[]
 
   const handleKanbanClick = (kanban: Kanban) => {
     setSelectedKanban(kanban)
