@@ -73,9 +73,24 @@ export default function ProcessiPage() {
   }, [loadData])
 
   const parseNumberList = (value: string | number): number[] => {
-    if (typeof value === 'number') return value === 0 ? [] : [value]
-    if (!value || value === '0') return []
-    return String(value).split(',').map(v => parseInt(v.trim())).filter(n => !isNaN(n) && n !== 0)
+    if (value === null || value === undefined || value === '' || value === 0 || value === '0') {
+      return []
+    }
+
+    // Convert to string, handling decimal numbers (e.g., 5.6 -> "5,6")
+    let strValue = String(value)
+
+    // If it's a decimal number like 5.6, it might be "5,6" interpreted as decimal
+    // Convert dots to commas for splitting
+    if (typeof value === 'number' && !Number.isInteger(value)) {
+      strValue = strValue.replace('.', ',')
+    }
+
+    // Split by comma or dot and parse as integers
+    return strValue
+      .split(/[,.]/)
+      .map(v => parseInt(v.trim()))
+      .filter(n => !isNaN(n) && n !== 0)
   }
 
   const validateExcel = (rows: ExcelRow[]): ValidationError[] => {
