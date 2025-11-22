@@ -22,7 +22,10 @@ export interface HeijunkaFiltersState {
 
 export default function HeijunkaPage() {
   const supabase = createClient()
-  const { canCreateProjects, canViewAll, reparto: userReparto } = useAuthStore()
+  const { canCreateProjects, canViewAll, isAdmin, reparto: userReparto, profile } = useAuthStore()
+
+  // Allow creating kanbans if user has permission, is admin, or has no profile yet (initial setup)
+  const canCreate = canCreateProjects() || isAdmin() || !profile
 
   const [kanbans, setKanbans] = useState<Kanban[]>([])
   const [reparti, setReparti] = useState<Reparto[]>([])
@@ -129,7 +132,7 @@ export default function HeijunkaPage() {
       <div className="flex items-center justify-between p-4 border-b bg-white">
         <h1 className="text-2xl font-semibold">Heijunka Box</h1>
         <div className="flex items-center gap-2">
-          {canCreateProjects() && (
+          {canCreate && (
             <Button onClick={() => setShowNewKanbanDialog(true)}>
               <Plus className="h-4 w-4 mr-2" />
               Nuovo Kanban
