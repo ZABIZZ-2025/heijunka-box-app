@@ -99,7 +99,7 @@ export function NewKanbanDialog({ open, onClose, onCreated, processi }: NewKanba
           descrizione_attivita_corrente: primaAttivita.descrizione,
           reparto_corrente_id: primaAttivita.reparto_id,
           descrizione_reparto_corrente: (primaAttivita.reparto as any)?.nome,
-          stato: 'non_avviato',
+          stato: 'in_attesa',
           creato_da: profile?.id,
         })
         .select()

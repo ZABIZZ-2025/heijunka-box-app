@@ -134,6 +134,9 @@ export function HeijunkaGrid({ kanbans, reparti, onKanbanClick, loading }: Heiju
             <th className="border-b border-r p-2 text-left font-medium text-sm min-w-[150px] bg-gray-50">
               Reparto
             </th>
+            <th className="border-b border-r p-2 text-left font-medium text-sm min-w-[100px] bg-gray-50">
+              Stato
+            </th>
             {dates.map((date) => {
               const isDateToday = isToday(date)
               const isDateHoliday = isHoliday(date)
@@ -187,6 +190,9 @@ export function HeijunkaGrid({ kanbans, reparti, onKanbanClick, loading }: Heiju
                       </div>
                     </td>
                   ) : null}
+                  <td className="border-b border-r p-1 text-xs text-muted-foreground bg-gray-50/50 whitespace-nowrap">
+                    {subRowLabels[subRow]}
+                  </td>
                   {dates.map((date) => {
                     const dateKey = formatDate(date, 'iso')
                     const cellKanbans = kanbanGrid[reparto.id]?.[subRow]?.[dateKey] || []
