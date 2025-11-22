@@ -36,6 +36,7 @@ export function NewKanbanDialog({ open, onClose, onCreated, processi }: NewKanba
   const { profile } = useAuthStore()
 
   const [loading, setLoading] = useState(false)
+  const [loadingAttivita, setLoadingAttivita] = useState(false)
   const [formData, setFormData] = useState({
     modello: '',
     cliente: '',
@@ -53,6 +54,7 @@ export function NewKanbanDialog({ open, onClose, onCreated, processi }: NewKanba
         return
       }
 
+      setLoadingAttivita(true)
       const { data } = await supabase
         .from('attivita_processo')
         .select('*, reparto:reparti(*)')
@@ -60,10 +62,13 @@ export function NewKanbanDialog({ open, onClose, onCreated, processi }: NewKanba
         .order('numero_attivita')
 
       if (data) setAttivita(data as any)
+      setLoadingAttivita(false)
     }
 
     loadAttivita()
   }, [formData.processo_id, supabase])
+
+  const primaAttivita = attivita.find(a => a.is_prima_attivita)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -78,15 +83,13 @@ export function NewKanbanDialog({ open, onClose, onCreated, processi }: NewKanba
       return
     }
 
+    if (!primaAttivita) {
+      toast.error('Attendi il caricamento delle attività del processo')
+      return
+    }
+
     setLoading(true)
     try {
-      // Get first activity
-      const primaAttivita = attivita.find(a => a.is_prima_attivita)
-      if (!primaAttivita) {
-        toast.error('Processo non ha attività iniziale')
-        return
-      }
-
       const { data, error } = await supabase
         .from('kanban')
         .insert({
@@ -117,6 +120,7 @@ export function NewKanbanDialog({ open, onClose, onCreated, processi }: NewKanba
         descrizione_progetto: '',
         processo_id: '',
       })
+      setAttivita([])
     } catch (error) {
       toast.error('Errore durante la creazione')
     } finally {
@@ -194,16 +198,22 @@ export function NewKanbanDialog({ open, onClose, onCreated, processi }: NewKanba
             </Select>
           </div>
 
-          {attivita.length > 0 && (
+          {formData.processo_id && (
             <div className="bg-muted/50 rounded-lg p-3">
               <p className="text-sm font-medium mb-2">Attività iniziale:</p>
-              <p className="text-sm text-muted-foreground">
-                {attivita.find(a => a.is_prima_attivita)?.descrizione || 'N/A'}
-                {' '}
-                <span className="text-xs">
-                  ({(attivita.find(a => a.is_prima_attivita)?.reparto as any)?.nome})
-                </span>
-              </p>
+              {loadingAttivita ? (
+                <p className="text-sm text-muted-foreground">Caricamento...</p>
+              ) : primaAttivita ? (
+                <p className="text-sm text-muted-foreground">
+                  {primaAttivita.descrizione}
+                  {' '}
+                  <span className="text-xs">
+                    ({(primaAttivita.reparto as any)?.nome})
+                  </span>
+                </p>
+              ) : (
+                <p className="text-sm text-destructive">Processo senza attività iniziale</p>
+              )}
             </div>
           )}
 
@@ -211,8 +221,8 @@ export function NewKanbanDialog({ open, onClose, onCreated, processi }: NewKanba
             <Button type="button" variant="outline" onClick={onClose}>
               Annulla
             </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Creazione...' : 'Crea Kanban'}
+            <Button type="submit" disabled={loading || loadingAttivita || (formData.processo_id && !primaAttivita)}>
+              {loading ? 'Creazione...' : loadingAttivita ? 'Caricamento...' : 'Crea Kanban'}
             </Button>
           </DialogFooter>
         </form>

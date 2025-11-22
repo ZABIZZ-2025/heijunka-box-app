@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { useAuthStore } from '@/store/authStore'
-import { Kanban, KanbanStatus } from '@/types/database'
+import { Kanban, KanbanStatus, AttivitaProcesso, Reparto } from '@/types/database'
 import { formatDateTime, formatDate } from '@/lib/utils'
 import {
   Dialog,
@@ -17,6 +17,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import {
   ClipboardList,
   Calendar,
   ArrowRight,
@@ -25,6 +32,7 @@ import {
   Play,
   AlertTriangle,
   Lock,
+  Edit2,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -34,6 +42,8 @@ interface KanbanModalProps {
   onClose: () => void
   onUpdate: () => void
 }
+
+type AttivitaWithReparto = AttivitaProcesso & { reparto?: Reparto }
 
 const statusConfig: Record<KanbanStatus, { label: string; variant: any }> = {
   non_avviato: { label: 'Non avviato', variant: 'secondary' },
@@ -54,6 +64,13 @@ export function KanbanModal({ kanban, open, onClose, onUpdate }: KanbanModalProp
   const [motivazione, setMotivazione] = useState('')
   const [showMotivazione, setShowMotivazione] = useState<'annulla' | 'parziale' | null>(null)
 
+  // Activities state
+  const [allActivities, setAllActivities] = useState<AttivitaWithReparto[]>([])
+  const [expectedNextActivities, setExpectedNextActivities] = useState<AttivitaWithReparto[]>([])
+  const [loadingActivities, setLoadingActivities] = useState(false)
+  const [editingNextActivities, setEditingNextActivities] = useState(false)
+  const [selectedNextActivities, setSelectedNextActivities] = useState<string[]>([])
+
   const isUserReparto = reparto?.id === kanban.reparto_corrente_id
   const canTakeAction = isUserReparto || isAdmin()
   const canModify = canModifyKanban() || isAdmin()
@@ -64,6 +81,52 @@ export function KanbanModal({ kanban, open, onClose, onUpdate }: KanbanModalProp
     kanban.stato === 'in_corso' &&
     kanban.data_prevista_fine &&
     new Date(kanban.data_prevista_fine) < today
+
+  // Load activities when modal opens
+  const loadActivities = useCallback(async () => {
+    if (!kanban.processo_id || !open) return
+
+    setLoadingActivities(true)
+    try {
+      // Load all activities for the process
+      const { data: activities } = await supabase
+        .from('attivita_processo')
+        .select('*, reparto:reparti(*)')
+        .eq('processo_id', kanban.processo_id)
+        .order('numero_attivita')
+
+      if (activities) {
+        setAllActivities(activities as AttivitaWithReparto[])
+
+        // Find current activity and get expected next activities
+        const currentActivity = activities.find(a => a.id === kanban.attivita_corrente_id)
+        if (currentActivity?.numero_attivita_successive?.length > 0) {
+          const nextActs = activities.filter(a =>
+            currentActivity.numero_attivita_successive.includes(a.numero_attivita)
+          )
+          setExpectedNextActivities(nextActs as AttivitaWithReparto[])
+          setSelectedNextActivities(nextActs.map(a => a.id))
+        } else {
+          setExpectedNextActivities([])
+          setSelectedNextActivities([])
+        }
+      }
+    } finally {
+      setLoadingActivities(false)
+    }
+  }, [kanban.processo_id, kanban.attivita_corrente_id, open, supabase])
+
+  useEffect(() => {
+    loadActivities()
+  }, [loadActivities])
+
+  // Reset editing state when modal closes
+  useEffect(() => {
+    if (!open) {
+      setEditingNextActivities(false)
+      setSelectedNextActivities([])
+    }
+  }, [open])
 
   const handleAvvia = async () => {
     setLoading(true)
@@ -95,12 +158,8 @@ export function KanbanModal({ kanban, open, onClose, onUpdate }: KanbanModalProp
 
     setLoading(true)
     try {
-      // Get next activities from process
-      const { data: attivitaCorrente } = await supabase
-        .from('attivita_processo')
-        .select('*')
-        .eq('id', kanban.attivita_corrente_id)
-        .single()
+      // Get selected next activities
+      const nextActivities = allActivities.filter(a => selectedNextActivities.includes(a.id))
 
       let updateData: any = {
         stato: 'in_corso',
@@ -108,33 +167,33 @@ export function KanbanModal({ kanban, open, onClose, onUpdate }: KanbanModalProp
         data_prevista_fine: dataPrevistaFine,
         ultima_modifica: new Date().toISOString(),
         modificato_da: profile?.id,
+        // Reset all next activities
+        prossima_attivita_1_id: null,
+        descrizione_prossima_attivita_1: null,
+        reparto_prossima_attivita_1_id: null,
+        prossima_attivita_2_id: null,
+        descrizione_prossima_attivita_2: null,
+        reparto_prossima_attivita_2_id: null,
+        prossima_attivita_3_id: null,
+        descrizione_prossima_attivita_3: null,
+        reparto_prossima_attivita_3_id: null,
       }
 
-      // Set next activities if available
-      if (attivitaCorrente?.numero_attivita_successive?.length > 0) {
-        const { data: nextActivities } = await supabase
-          .from('attivita_processo')
-          .select('*, reparto:reparti(*)')
-          .eq('processo_id', kanban.processo_id)
-          .in('numero_attivita', attivitaCorrente.numero_attivita_successive)
-
-        if (nextActivities && nextActivities.length > 0) {
-          updateData.prossima_attivita_1_id = nextActivities[0]?.id || null
-          updateData.descrizione_prossima_attivita_1 = nextActivities[0]?.descrizione || null
-          updateData.reparto_prossima_attivita_1_id = nextActivities[0]?.reparto_id || null
-
-          if (nextActivities.length > 1) {
-            updateData.prossima_attivita_2_id = nextActivities[1]?.id || null
-            updateData.descrizione_prossima_attivita_2 = nextActivities[1]?.descrizione || null
-            updateData.reparto_prossima_attivita_2_id = nextActivities[1]?.reparto_id || null
-          }
-
-          if (nextActivities.length > 2) {
-            updateData.prossima_attivita_3_id = nextActivities[2]?.id || null
-            updateData.descrizione_prossima_attivita_3 = nextActivities[2]?.descrizione || null
-            updateData.reparto_prossima_attivita_3_id = nextActivities[2]?.reparto_id || null
-          }
-        }
+      // Set selected next activities
+      if (nextActivities.length > 0) {
+        updateData.prossima_attivita_1_id = nextActivities[0]?.id
+        updateData.descrizione_prossima_attivita_1 = nextActivities[0]?.descrizione
+        updateData.reparto_prossima_attivita_1_id = nextActivities[0]?.reparto_id
+      }
+      if (nextActivities.length > 1) {
+        updateData.prossima_attivita_2_id = nextActivities[1]?.id
+        updateData.descrizione_prossima_attivita_2 = nextActivities[1]?.descrizione
+        updateData.reparto_prossima_attivita_2_id = nextActivities[1]?.reparto_id
+      }
+      if (nextActivities.length > 2) {
+        updateData.prossima_attivita_3_id = nextActivities[2]?.id
+        updateData.descrizione_prossima_attivita_3 = nextActivities[2]?.descrizione
+        updateData.reparto_prossima_attivita_3_id = nextActivities[2]?.reparto_id
       }
 
       const { error } = await supabase
@@ -311,7 +370,24 @@ export function KanbanModal({ kanban, open, onClose, onUpdate }: KanbanModalProp
     }
   }
 
+  const toggleNextActivity = (activityId: string) => {
+    setSelectedNextActivities(prev => {
+      if (prev.includes(activityId)) {
+        return prev.filter(id => id !== activityId)
+      } else if (prev.length < 3) {
+        return [...prev, activityId]
+      }
+      return prev
+    })
+  }
+
   const statusInfo = statusConfig[kanban.stato]
+
+  // Get other activities (not current, not expected)
+  const otherActivities = allActivities.filter(a =>
+    a.id !== kanban.attivita_corrente_id &&
+    !expectedNextActivities.some(e => e.id === a.id)
+  )
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -367,7 +443,7 @@ export function KanbanModal({ kanban, open, onClose, onUpdate }: KanbanModalProp
           <section>
             <h3 className="font-semibold mb-2 flex items-center gap-2">
               <ArrowRight className="h-4 w-4" />
-              Processo
+              Attività Corrente
             </h3>
             <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
@@ -407,10 +483,148 @@ export function KanbanModal({ kanban, open, onClose, onUpdate }: KanbanModalProp
             </section>
           )}
 
-          {/* Prossime attività */}
-          {(kanban.prossima_attivita_1_id || kanban.prossima_attivita_2_id || kanban.prossima_attivita_3_id) && (
+          {/* Prossime attività - Show when in_attesa or in_corso */}
+          {['in_attesa', 'in_corso'].includes(kanban.stato) && (
             <section>
-              <h3 className="font-semibold mb-2">Prossime Attività</h3>
+              <h3 className="font-semibold mb-2 flex items-center gap-2">
+                <ArrowRight className="h-4 w-4" />
+                Prossime Attività (da processo)
+                {canModify && kanban.stato === 'in_attesa' && !editingNextActivities && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditingNextActivities(true)}
+                    className="ml-auto"
+                  >
+                    <Edit2 className="h-3 w-3 mr-1" />
+                    Modifica
+                  </Button>
+                )}
+              </h3>
+
+              {loadingActivities ? (
+                <p className="text-sm text-muted-foreground">Caricamento attività...</p>
+              ) : editingNextActivities ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    Seleziona fino a 3 attività successive (quelle previste sono già selezionate):
+                  </p>
+
+                  {/* Expected activities */}
+                  {expectedNextActivities.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Previste dal processo:</p>
+                      {expectedNextActivities.map(activity => (
+                        <label
+                          key={activity.id}
+                          className={`flex items-center gap-2 p-2 rounded border cursor-pointer ${
+                            selectedNextActivities.includes(activity.id)
+                              ? 'bg-primary/10 border-primary'
+                              : 'hover:bg-muted/50'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedNextActivities.includes(activity.id)}
+                            onChange={() => toggleNextActivity(activity.id)}
+                            className="rounded"
+                          />
+                          <span className="text-sm">
+                            {activity.numero_attivita}. {activity.descrizione}
+                            <span className="text-muted-foreground ml-1">
+                              ({(activity.reparto as any)?.nome})
+                            </span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Other activities */}
+                  {otherActivities.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Altre attività disponibili:</p>
+                      {otherActivities.map(activity => (
+                        <label
+                          key={activity.id}
+                          className={`flex items-center gap-2 p-2 rounded border cursor-pointer ${
+                            selectedNextActivities.includes(activity.id)
+                              ? 'bg-primary/10 border-primary'
+                              : 'hover:bg-muted/50'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedNextActivities.includes(activity.id)}
+                            onChange={() => toggleNextActivity(activity.id)}
+                            disabled={!selectedNextActivities.includes(activity.id) && selectedNextActivities.length >= 3}
+                            className="rounded"
+                          />
+                          <span className="text-sm">
+                            {activity.numero_attivita}. {activity.descrizione}
+                            <span className="text-muted-foreground ml-1">
+                              ({(activity.reparto as any)?.nome})
+                            </span>
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setEditingNextActivities(false)
+                        setSelectedNextActivities(expectedNextActivities.map(a => a.id))
+                      }}
+                    >
+                      Annulla
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => setEditingNextActivities(false)}
+                    >
+                      Conferma selezione
+                    </Button>
+                  </div>
+                </div>
+              ) : expectedNextActivities.length > 0 ? (
+                <ul className="space-y-1 text-sm">
+                  {expectedNextActivities.map((activity, index) => (
+                    <li key={activity.id} className={selectedNextActivities.includes(activity.id) ? '' : 'line-through text-muted-foreground'}>
+                      {index + 1}. {activity.descrizione}
+                      <span className="text-muted-foreground ml-1">({(activity.reparto as any)?.nome})</span>
+                    </li>
+                  ))}
+                  {/* Show manually added activities */}
+                  {selectedNextActivities
+                    .filter(id => !expectedNextActivities.some(e => e.id === id))
+                    .map((id, index) => {
+                      const activity = allActivities.find(a => a.id === id)
+                      if (!activity) return null
+                      return (
+                        <li key={id} className="text-blue-600">
+                          {expectedNextActivities.length + index + 1}. {activity.descrizione}
+                          <span className="ml-1">({(activity.reparto as any)?.nome})</span>
+                          <Badge variant="outline" className="ml-2 text-xs">Aggiunta manualmente</Badge>
+                        </li>
+                      )
+                    })}
+                </ul>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Questa è l'ultima attività del processo
+                </p>
+              )}
+            </section>
+          )}
+
+          {/* Show saved next activities when in_corso */}
+          {kanban.stato === 'in_corso' && (kanban.prossima_attivita_1_id || kanban.prossima_attivita_2_id || kanban.prossima_attivita_3_id) && (
+            <section className="bg-muted/30 rounded-lg p-3">
+              <h3 className="font-semibold mb-2 text-sm">Attività successive confermate:</h3>
               <ul className="space-y-1 text-sm">
                 {kanban.descrizione_prossima_attivita_1 && (
                   <li>1. {kanban.descrizione_prossima_attivita_1}</li>
@@ -448,24 +662,30 @@ export function KanbanModal({ kanban, open, onClose, onUpdate }: KanbanModalProp
             )}
 
             {kanban.stato === 'in_attesa' && canTakeAction && (
-              <div className="flex items-center gap-2 w-full">
-                <div className="flex-1">
-                  <Label htmlFor="dataPrevista">Data prevista fine</Label>
-                  <Input
-                    id="dataPrevista"
-                    type="date"
-                    value={dataPrevistaFine}
-                    onChange={(e) => setDataPrevistaFine(e.target.value)}
-                    min={new Date().toISOString().split('T')[0]}
-                  />
+              <div className="flex flex-col gap-3 w-full">
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <Label htmlFor="dataPrevista">Data prevista fine</Label>
+                    <Input
+                      id="dataPrevista"
+                      type="date"
+                      value={dataPrevistaFine}
+                      onChange={(e) => setDataPrevistaFine(e.target.value)}
+                      min={new Date().toISOString().split('T')[0]}
+                    />
+                  </div>
+                  <Button
+                    onClick={handlePrendiInCarico}
+                    disabled={loading || !dataPrevistaFine}
+                  >
+                    Prendi in carico
+                  </Button>
                 </div>
-                <Button
-                  onClick={handlePrendiInCarico}
-                  disabled={loading || !dataPrevistaFine}
-                  className="mt-6"
-                >
-                  Prendi in carico
-                </Button>
+                {selectedNextActivities.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {selectedNextActivities.length} attività successive selezionate
+                  </p>
+                )}
               </div>
             )}
 
