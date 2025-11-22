@@ -24,8 +24,8 @@ export default function HeijunkaPage() {
   const supabase = createClient()
   const { canCreateProjects, canViewAll, isAdmin, reparto: userReparto, profile } = useAuthStore()
 
-  // Allow creating kanbans if user has permission, is admin, or has no profile yet (initial setup)
-  const canCreate = canCreateProjects() || isAdmin() || !profile
+  // Allow creating kanbans if user has permission, is admin, or has no profile/reparto yet (initial setup)
+  const canCreate = canCreateProjects() || isAdmin() || !profile || !userReparto
 
   const [kanbans, setKanbans] = useState<Kanban[]>([])
   const [reparti, setReparti] = useState<Reparto[]>([])

@@ -41,7 +41,7 @@ export function Sidebar() {
   const { profile, reparto, reset, isAdmin } = useAuthStore()
 
   // Show admin menu if user is admin or has no profile yet (initial setup)
-  const showAdminMenu = isAdmin() || !profile
+  const showAdminMenu = isAdmin() || !profile || !reparto
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
