@@ -40,6 +40,9 @@ export function Sidebar() {
   const supabase = createClient()
   const { profile, reparto, reset, isAdmin } = useAuthStore()
 
+  // Show admin menu if user is admin or has no profile yet (initial setup)
+  const showAdminMenu = isAdmin() || !profile
+
   const handleLogout = async () => {
     await supabase.auth.signOut()
     reset()
@@ -81,7 +84,7 @@ export function Sidebar() {
           )
         })}
 
-        {isAdmin() && (
+        {showAdminMenu && (
           <>
             <div className="pt-4 pb-2">
               <div className="border-t" />
