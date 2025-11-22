@@ -104,7 +104,7 @@ CREATE TABLE kanban (
   prossima_attivita_3_id UUID REFERENCES attivita_processo(id),
   descrizione_prossima_attivita_3 VARCHAR(500),
   reparto_prossima_attivita_3_id UUID REFERENCES reparti(id),
-  stato VARCHAR(50) NOT NULL DEFAULT 'non_avviato',
+  stato VARCHAR(50) NOT NULL DEFAULT 'in_attesa',
   motivazione_chiusura TEXT,
   kanban_padre_id UUID REFERENCES kanban(id) ON DELETE SET NULL,
   is_split BOOLEAN DEFAULT false,
