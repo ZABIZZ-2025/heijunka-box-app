@@ -1,0 +1,136 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    --primary: 210 100% 50%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 210 100% 50%;
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 210 100% 50%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 210 100% 50%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Heijunka Grid specific styles */
+.heijunka-cell {
+  min-height: 40px;
+  transition: background-color 0.2s ease;
+}
+
+.heijunka-cell:hover {
+  background-color: hsl(var(--muted) / 0.5);
+}
+
+.kanban-marker {
+  @apply rounded-md shadow-sm cursor-pointer transition-all duration-200;
+  min-width: 50px;
+  min-height: 30px;
+}
+
+.kanban-marker:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+}
+
+.kanban-marker.waiting {
+  @apply bg-heijunka-waiting text-white border-2;
+  border-color: #CC7722;
+}
+
+.kanban-marker.in-progress {
+  @apply bg-heijunka-inProgress text-white border-2;
+  border-color: #2277CC;
+}
+
+.kanban-marker.delayed {
+  @apply bg-heijunka-delayed text-white border-2 animate-pulse-slow;
+  border-color: #CC0000;
+}
+
+.kanban-marker.convergence {
+  @apply bg-heijunka-convergence text-gray-800 border-2;
+  border-color: #CCAA00;
+}
+
+.kanban-marker.upcoming {
+  @apply bg-heijunka-upcoming text-gray-600 border border-dashed;
+  border-color: #999999;
+  opacity: 0.3;
+}
+
+/* Today column highlight */
+.today-column {
+  @apply bg-blue-50;
+}
+
+/* Holiday column */
+.holiday-column {
+  @apply bg-red-50;
+}
