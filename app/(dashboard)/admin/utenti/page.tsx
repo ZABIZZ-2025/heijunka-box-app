@@ -159,7 +159,6 @@ export default function UtentiPage() {
       } else {
         toast.error(error.message || 'Errore durante il salvataggio')
       }
-      console.error(error)
     }
   }
 
@@ -177,7 +176,6 @@ export default function UtentiPage() {
       loadData()
     } catch (error: any) {
       toast.error(error.message || 'Errore durante l\'eliminazione')
-      console.error(error)
     }
   }
 

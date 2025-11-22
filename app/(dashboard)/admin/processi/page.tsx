@@ -297,7 +297,6 @@ export default function ProcessiPage() {
       toast.success(`Processo "${rows[0].cod_proc}" caricato con successo!`)
       loadData()
     } catch (error) {
-      console.error(error)
       toast.error('Errore durante il caricamento')
     } finally {
       setUploading(false)
@@ -350,7 +349,6 @@ export default function ProcessiPage() {
       loadData()
     } catch (error) {
       toast.error('Errore durante l\'eliminazione')
-      console.error(error)
     }
   }
 

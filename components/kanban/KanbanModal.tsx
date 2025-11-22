@@ -82,7 +82,6 @@ export function KanbanModal({ kanban, open, onClose, onUpdate }: KanbanModalProp
       onUpdate()
     } catch (error) {
       toast.error('Errore durante l\'avvio')
-      console.error(error)
     } finally {
       setLoading(false)
     }
@@ -148,7 +147,6 @@ export function KanbanModal({ kanban, open, onClose, onUpdate }: KanbanModalProp
       onUpdate()
     } catch (error) {
       toast.error('Errore durante la presa in carico')
-      console.error(error)
     } finally {
       setLoading(false)
     }
@@ -278,7 +276,6 @@ export function KanbanModal({ kanban, open, onClose, onUpdate }: KanbanModalProp
       onUpdate()
     } catch (error) {
       toast.error('Errore durante il completamento')
-      console.error(error)
     } finally {
       setLoading(false)
     }
@@ -307,7 +304,6 @@ export function KanbanModal({ kanban, open, onClose, onUpdate }: KanbanModalProp
       onUpdate()
     } catch (error) {
       toast.error('Errore durante l\'annullamento')
-      console.error(error)
     } finally {
       setLoading(false)
       setShowMotivazione(null)

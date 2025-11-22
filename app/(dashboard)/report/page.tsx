@@ -61,7 +61,6 @@ export default function ReportPage() {
           inRitardo: inRitardo || 0,
         })
       } catch (error) {
-        console.error(error)
       } finally {
         setLoading(false)
       }

@@ -78,13 +78,11 @@ export default function HeijunkaPage() {
 
       if (error) {
         toast.error('Errore nel caricamento dati')
-        console.error(error)
       } else if (kanbansData) {
         setKanbans(kanbansData)
       }
     } catch (error) {
       toast.error('Errore nel caricamento dati')
-      console.error(error)
     } finally {
       setLoading(false)
     }

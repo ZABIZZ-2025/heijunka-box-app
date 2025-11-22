@@ -119,7 +119,6 @@ export function NewKanbanDialog({ open, onClose, onCreated, processi }: NewKanba
       })
     } catch (error) {
       toast.error('Errore durante la creazione')
-      console.error(error)
     } finally {
       setLoading(false)
     }

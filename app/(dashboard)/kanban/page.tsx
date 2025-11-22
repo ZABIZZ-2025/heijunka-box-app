@@ -72,7 +72,6 @@ export default function KanbanListPage() {
       setKanbans(data || [])
     } catch (error) {
       toast.error('Errore nel caricamento')
-      console.error(error)
     } finally {
       setLoading(false)
     }
