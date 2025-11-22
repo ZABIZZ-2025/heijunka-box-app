@@ -124,7 +124,7 @@ export default function UtentiPage() {
         // Update auth email if changed
         if (formData.email !== editingUtente.email) {
           // Note: This requires admin rights in Supabase
-          toast.info('Nota: l\'email di autenticazione potrebbe richiedere aggiornamento manuale')
+          toast('Nota: l\'email di autenticazione potrebbe richiedere aggiornamento manuale', { icon: 'ℹ️' })
         }
 
         toast.success('Utente aggiornato')
